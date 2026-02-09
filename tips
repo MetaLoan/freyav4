@@ -1,0 +1,146 @@
+# Telegram Mini App 全屏模式与安全区适配指南
+
+> 本文档总结了在 Telegram Mini App 中实现真正全屏模式和安全区适配的最佳实践与避坑指南。
+
+## 目录
+
+1. [问题背景](#问题背景)
+2. [核心解决方案](#核心解决方案)
+3. [常见错误与避坑指南](#常见错误与避坑指南)
+4. [完整代码示例](#完整代码示例)
+5. [调试技巧](#调试技巧)
+
+---
+
+## 问题背景
+
+### 全屏模式的误区
+
+很多开发者认为调用 `webApp.expand()` 就能实现全屏，但这是**错误的**！
+
+- `expand()` 只是让 Mini App 占满可用高度，但**不是真正的全屏模式**
+- 真正的全屏模式需要调用 `web_app_request_fullscreen` 事件（Bot API 8.0+）
+- 全屏模式会隐藏 Telegram 的原生头部，显示一个浮动的 "Close" 按钮
+
+### 安全区的挑战
+
+进入全屏模式后，需要处理两类安全区：
+
+1. **`safeAreaInset`**：设备物理安全区（刘海、底部手势条等）
+2. **`contentSafeAreaInset`**：Telegram UI 占用的区域（全屏模式下的 Close 按钮等）
+
+---
+
+## 核心解决方案
+
+### 1. 引入官方 SDK 脚本
+
+**关键！** 必须在 HTML 中引入官方的 `telegram-web-app.js` 脚本：
+
+```html
+<!-- 在 layout.tsx 或 index.html 中 -->
+<head>
+  <script src="https://telegram.org/js/telegram-web-app.js" async></script>
+</head>
+```
+
+如果不引入这个脚本，`window.Telegram.WebApp` 对象将不存在！
+
+### 2. 强制调用全屏方法（不要依赖 JS 封装）
+
+**避坑要点**：不要检查 `webApp.requestFullscreen` 是否存在后再调用！
+
+因为某些 Telegram 客户端的 JS 对象可能没有暴露这个方法，但底层事件是支持的。
+
+**正确做法**：直接通过底层 API 发送事件：
+
+```typescript
+// ✅ 正确：强制发送 web_app_request_fullscreen 事件
+function forceRequestFullscreen() {
+  try {
+    // 方法1: 通过 TelegramWebviewProxy（移动端/桌面端）
+    if ((window as any).TelegramWebviewProxy?.postEvent) {
+      (window as any).TelegramWebviewProxy.postEvent('web_app_request_fullscreen', '');
+      console.log('Sent web_app_request_fullscreen via TelegramWebviewProxy');
+    }
+    
+    // 方法2: 通过 postMessage（Web iframe）
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        JSON.stringify({ eventType: 'web_app_request_fullscreen' }), 
+        '*'
+      );
+      console.log('Sent web_app_request_fullscreen via postMessage');
+    }
+  } catch (err) {
+    console.error('Error sending web_app_request_fullscreen:', err);
+  }
+}
+```
+
+**错误做法**：
+
+```typescript
+// ❌ 错误：这样可能永远不会调用全屏
+if (typeof webApp.requestFullscreen === 'function') {
+  webApp.requestFullscreen();
+} else {
+  webApp.expand(); // expand 不是全屏！
+}
+```
+## 核心解决方案
+
+### 1. 引入官方 SDK 脚本
+
+**关键！** 必须在 HTML 中引入官方的 `telegram-web-app.js` 脚本：
+
+```html
+<!-- 在 layout.tsx 或 index.html 中 -->
+<head>
+  <script src="https://telegram.org/js/telegram-web-app.js" async></script>
+</head>
+```
+
+如果不引入这个脚本，`window.Telegram.WebApp` 对象将不存在！
+
+### 2. 强制调用全屏方法（不要依赖 JS 封装）
+
+**避坑要点**：不要检查 `webApp.requestFullscreen` 是否存在后再调用！
+
+因为某些 Telegram 客户端的 JS 对象可能没有暴露这个方法，但底层事件是支持的。
+
+**正确做法**：直接通过底层 API 发送事件：
+
+```typescript
+// ✅ 正确：强制发送 web_app_request_fullscreen 事件
+function forceRequestFullscreen() {
+  try {
+    // 方法1: 通过 TelegramWebviewProxy（移动端/桌面端）
+    if ((window as any).TelegramWebviewProxy?.postEvent) {
+      (window as any).TelegramWebviewProxy.postEvent('web_app_request_fullscreen', '');
+      console.log('Sent web_app_request_fullscreen via TelegramWebviewProxy');
+    }
+    
+    // 方法2: 通过 postMessage（Web iframe）
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        JSON.stringify({ eventType: 'web_app_request_fullscreen' }), 
+        '*'
+      );
+      console.log('Sent web_app_request_fullscreen via postMessage');
+    }
+  } catch (err) {
+    console.error('Error sending web_app_request_fullscreen:', err);
+  }
+}
+```
+
+**错误做法**：
+
+```typescript
+// ❌ 错误：这样可能永远不会调用全屏
+if (typeof webApp.requestFullscreen === 'function') {
+  webApp.requestFullscreen();
+} else {
+  webApp.expand(); // expand 不是全屏！
+}
