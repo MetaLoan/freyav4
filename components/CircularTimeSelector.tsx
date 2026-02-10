@@ -304,8 +304,6 @@ export function CircularTimeSelector({
     }).start();
   }, []);
 
-  if (!isVisible) return null;
-
   // 轮盘锚点（文字中心项位置）
   const anchorX = SW * 0.1;
   const anchorY = SH * 0.46 - 20;
@@ -322,11 +320,39 @@ export function CircularTimeSelector({
   const svgR2 = textArcR + R.scale(30);  // 内圈
 
   // 圆弧方程: dx(dy) = sqrt(R² - dy²) - R
-  const arcDx = (dy: number) =>
-    Math.sqrt(Math.max(0, textArcR * textArcR - dy * dy)) - textArcR;
+  const arcDx = useCallback((dy: number) =>
+    Math.sqrt(Math.max(0, textArcR * textArcR - dy * dy)) - textArcR, [textArcR]);
+  
   // 圆弧切线角(deg): θ(dy) = arcsin(dy / R)
-  const arcAngle = (dy: number) =>
-    Math.asin(Math.min(Math.max(dy / textArcR, -1), 1)) * (180 / Math.PI);
+  const arcAngle = useCallback((dy: number) =>
+    Math.asin(Math.min(Math.max(dy / textArcR, -1), 1)) * (180 / Math.PI), [textArcR]);
+
+  // 预计算圆弧轨迹 (Output Ranges) - 所有项共享相同的运动轨迹形状
+  // 这样避免在 items.map 循环中重复进行 60+ 次的 Math.sqrt 和 Math.asin 计算
+  const { txOut, rotOut, scaleOut, opacityOut, subOpacityOut, textColorOut } = useMemo(() => {
+    const SAMPLES = 11;
+    const _txOut: number[] = [];
+    const _rotOut: string[] = [];
+    
+    for (let s = 0; s < SAMPLES; s++) {
+      const t = -1 + (2 * s) / (SAMPLES - 1); // -1 → +1
+      const dy = VISIBLE_RANGE * t;
+      _txOut.push(arcDx(dy));
+      _rotOut.push(`${arcAngle(dy)}deg`);
+    }
+
+    return {
+      txOut: _txOut,
+      rotOut: _rotOut,
+      // 预定义其他通用的 OutputRange
+      scaleOut: [0.38, 1, 0.38],
+      opacityOut: [0, 0.3, 1, 0.3, 0],
+      subOpacityOut: [0, 1, 0],
+      textColorOut: ['#FFFFFF', '#E4D5A8', '#FFFFFF']
+    };
+  }, [arcDx, arcAngle]);
+
+  if (!isVisible) return null;
 
   return (
     <YStack
@@ -389,39 +415,45 @@ export function CircularTimeSelector({
         {items.map((item, i) => {
           const center = -(i - CENTER_INDEX) * ITEM_SPACING;
 
+          // 优化：仅计算 InputRange，复用预计算的 OutputRange
+          
+          // 1. 垂直位移 (线性)
           const translateY = wheelOffset.interpolate({
             inputRange: [center - VISIBLE_RANGE, center, center + VISIBLE_RANGE],
             outputRange: [-VISIBLE_RANGE, 0, VISIBLE_RANGE],
             extrapolate: 'clamp',
           });
 
-          // 使用真实圆弧方程计算水平偏移和旋转角（11 个采样点）
+          // 2. 水平位移 & 旋转 (复杂曲线)
+          // 动态生成 InputRange (txIn/rotIn)
           const SAMPLES = 11;
-          const txIn: number[] = [];
-          const txOut: number[] = [];
-          const rotIn: number[] = [];
-          const rotOut: string[] = [];
+          const curveInputRange: number[] = [];
           for (let s = 0; s < SAMPLES; s++) {
-            const t = -1 + (2 * s) / (SAMPLES - 1); // -1 → +1
-            const dy = VISIBLE_RANGE * t;
-            txIn.push(center + VISIBLE_RANGE * t);
-            txOut.push(arcDx(dy));
-            rotIn.push(center + VISIBLE_RANGE * t);
-            rotOut.push(`${arcAngle(dy)}deg`);
+             // 这里的 t 必须与 useMemo 中的 t 逻辑一致
+             const t = -1 + (2 * s) / (SAMPLES - 1);
+             curveInputRange.push(center + VISIBLE_RANGE * t);
           }
 
           const translateX = wheelOffset.interpolate({
-            inputRange: txIn,
+            inputRange: curveInputRange,
             outputRange: txOut,
             extrapolate: 'clamp',
           });
 
-          const scale = wheelOffset.interpolate({
-            inputRange: [center - VISIBLE_RANGE, center, center + VISIBLE_RANGE],
-            outputRange: [0.38, 1, 0.38],
+          const rotateZ = wheelOffset.interpolate({
+            inputRange: curveInputRange,
+            outputRange: rotOut,
             extrapolate: 'clamp',
           });
 
+          // 3. 缩放
+          const scale = wheelOffset.interpolate({
+            inputRange: [center - VISIBLE_RANGE, center, center + VISIBLE_RANGE],
+            outputRange: scaleOut,
+            extrapolate: 'clamp',
+          });
+
+          // 4. 透明度
           const opacity = wheelOffset.interpolate({
             inputRange: [
               center - VISIBLE_RANGE,
@@ -430,28 +462,21 @@ export function CircularTimeSelector({
               center + VISIBLE_RANGE * 0.65,
               center + VISIBLE_RANGE,
             ],
-            outputRange: [0, 0.3, 1, 0.3, 0],
+            outputRange: opacityOut,
             extrapolate: 'clamp',
           });
 
-          // 沿圆弧切线方向旋转（基于真实 arcsin）
-          const rotateZ = wheelOffset.interpolate({
-            inputRange: rotIn,
-            outputRange: rotOut,
-            extrapolate: 'clamp',
-          });
-
-          // 子标签透明度（只在中心位置显示）
+          // 5. 子标签透明度
           const subOpacity = wheelOffset.interpolate({
             inputRange: [center - ITEM_SPACING, center, center + ITEM_SPACING],
-            outputRange: [0, 1, 0],
+            outputRange: subOpacityOut,
             extrapolate: 'clamp',
           });
 
-          // 文字颜色插值（中心高亮为奶油金）
+          // 6. 文字颜色
           const textColor = wheelOffset.interpolate({
             inputRange: [center - ITEM_SPACING * 0.8, center, center + ITEM_SPACING * 0.8],
-            outputRange: ['#FFFFFF', '#E4D5A8', '#FFFFFF'],
+            outputRange: textColorOut,
             extrapolate: 'clamp',
           });
 
@@ -472,8 +497,10 @@ export function CircularTimeSelector({
                 // @ts-ignore web: transform-origin
                 transformOrigin: 'left center',
               }}
+              // 性能优化：不渲染不可见区域的指针事件
+              pointerEvents="none" 
             >
-              <Pressable onPress={() => handleItemTap(i)}>
+              <Pressable onPress={() => handleItemTap(i)} pointerEvents="auto">
                 <XStack alignItems="center" gap={R.spacing.sm()}>
                   <Animated.Text
                     style={{
