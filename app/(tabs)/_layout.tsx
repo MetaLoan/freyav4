@@ -16,7 +16,7 @@ export default function TabsLayout() {
         headerShown: false,
       }}
     >
-      <Tabs.Screen name="index" />
+      <Tabs.Screen name="home" />
       <Tabs.Screen name="explore" />
       <Tabs.Screen name="chart" />
       <Tabs.Screen name="profile" />
