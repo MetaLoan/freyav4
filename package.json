@@ -9,8 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "npx expo export -p web",
-    "predeploy": "npm run build:web",
-    "deploy": "gh-pages -d dist",
+    "predeploy": "npm run build:web && touch dist/.nojekyll",
+    "deploy": "gh-pages -d dist --dotfiles",
     "build:ios": "eas build --platform ios",
     "build:android": "eas build --platform android"
   },
