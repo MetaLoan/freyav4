@@ -1,13 +1,16 @@
 {
   "name": "freyav4",
   "version": "1.0.0",
+  "homepage": "https://MetaLoan.github.io/freyav4",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:web": "expo export:web",
+    "build:web": "npx expo export -p web",
+    "predeploy": "npm run build:web",
+    "deploy": "gh-pages -d dist",
     "build:ios": "eas build --platform ios",
     "build:android": "eas build --platform android"
   },
@@ -38,6 +41,7 @@
     "@tamagui/babel-plugin": "^1.120.0",
     "@types/react": "~18.3.12",
     "babel-plugin-module-resolver": "^5.0.2",
+    "gh-pages": "^6.3.0",
     "typescript": "^5.3.3"
   },
   "private": true
