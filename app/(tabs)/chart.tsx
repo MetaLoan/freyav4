@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useHeaderSafeArea } from '@/hooks/useSafeArea';
 import { GradientBackground } from '@/components/GradientBackground';
 import { R } from '@/src/config/responsive';
+import { NatalChart } from '@/components/chart/NatalChart';
 
 export default function ChartScreen() {
   const headerTop = useHeaderSafeArea();
@@ -44,22 +45,15 @@ export default function ChartScreen() {
             Your cosmic blueprint based on the exact time and place of your birth.
           </Text>
 
-          {/* 星盘占位区域 */}
+
+
+          {/* Star Chart Visualization */}
           <YStack
-            height={R.scale(300)}
-            borderRadius={R.card.md.radius()}
-            backgroundColor="$bgCardAlpha"
             alignItems="center"
             justifyContent="center"
+            paddingVertical={R.spacing.lg()}
           >
-            <Text fontSize={R.fontSize.hero()} color="$creamGold">✦</Text>
-            <Text
-              fontSize={R.fontSize.base()}
-              color="$textMuted"
-              marginTop={R.spacing.md()}
-            >
-              Chart visualization coming soon
-            </Text>
+            <NatalChart />
           </YStack>
 
           {/* 行星位置 */}

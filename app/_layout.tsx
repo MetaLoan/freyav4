@@ -4,16 +4,17 @@ import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TamaguiProvider } from '../providers/TamaguiProvider';
 import { TimeSelectorProvider } from '../contexts/TimeSelectorContext';
+import { UserProvider } from '../contexts/UserContext';
 import { TelegramSDK } from '../utils/telegram';
 import { isTelegram } from '../utils/platform';
-import { 
-  PlayfairDisplay_400Regular, 
-  PlayfairDisplay_700Bold 
+import {
+  PlayfairDisplay_400Regular,
+  PlayfairDisplay_700Bold
 } from '@expo-google-fonts/playfair-display';
-import { 
-  Roboto_400Regular, 
-  Roboto_500Medium, 
-  Roboto_700Bold 
+import {
+  Roboto_400Regular,
+  Roboto_500Medium,
+  Roboto_700Bold
 } from '@expo-google-fonts/roboto';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -31,6 +32,7 @@ export default function RootLayout() {
     Roboto_500Medium,
     Roboto_700Bold,
   });
+
   useEffect(() => {
     // 字体加载完成后隐藏启动画面
     if (fontsLoaded) {
@@ -46,10 +48,10 @@ export default function RootLayout() {
         const webApp = telegram.getRaw();
         webApp.ready();
         webApp.expand();
-        
+
         // 同步安全区域到 CSS 变量
         telegram.syncSafeAreaToCSSVariables();
-        
+
         // 监听安全区域变化
         if (webApp.onEvent) {
           webApp.onEvent('viewportChanged', () => {
@@ -73,27 +75,37 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <TamaguiProvider>
-        <TimeSelectorProvider>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: {
-                backgroundColor: '#25272E',
-              },
-              animation: 'fade',
-            }}
-          >
-            {/* Tab 主页面组 */}
-            <Stack.Screen name="(tabs)" />
-            {/* 欢迎/登录页（独立于 Tab） */}
-            <Stack.Screen
-              name="welcome"
-              options={{
-                animation: 'slide_from_bottom',
+        <UserProvider>
+          <TimeSelectorProvider>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: {
+                  backgroundColor: '#1A1825',
+                },
+                animation: 'fade',
               }}
-            />
-          </Stack>
-        </TimeSelectorProvider>
+            >
+              {/* Tab 主页面组 */}
+              <Stack.Screen name="(tabs)" />
+              {/* 欢迎/登录页（独立于 Tab） */}
+              <Stack.Screen
+                name="welcome"
+                options={{
+                  animation: 'slide_from_bottom',
+                }}
+              />
+              {/* Design System Playground */}
+              <Stack.Screen
+                name="design_system"
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
+                }}
+              />
+            </Stack>
+          </TimeSelectorProvider>
+        </UserProvider>
       </TamaguiProvider>
     </SafeAreaProvider>
   );

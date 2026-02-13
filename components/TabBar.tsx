@@ -1,19 +1,20 @@
-/**
- * 自定义底部导航栏
- * 
- * Celestial Elegance 风格，暗色背景 + 奶油金高亮
- * 支持安全区域适配（iOS 底部手势条 / Android 导航栏）
- */
-
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
+import { Animated, Pressable } from 'react-native';
 import { YStack, XStack, Text } from 'tamagui';
-import { Pressable } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Home, Compass, Sparkles, User } from '@tamagui/lucide-icons';
 import { useBottomSafeArea } from '@/hooks/useSafeArea';
 import { R } from '@/src/config/responsive';
+import { palette } from '@/tamagui.config';
 
-// Tab 图标映射
+/**
+ * Custom Tab Bar
+ * 
+ * Minimalist Celestial Style:
+ * Dark "Void" background + Gold Highlights + Thin wired borders
+ */
+
+// Tab Icons
 const TAB_ICONS: Record<string, typeof Home> = {
   index: Home,
   explore: Compass,
@@ -21,7 +22,7 @@ const TAB_ICONS: Record<string, typeof Home> = {
   profile: User,
 };
 
-// Tab 标签映射
+// Tab Labels
 const TAB_LABELS: Record<string, string> = {
   index: 'Home',
   explore: 'Explore',
@@ -29,16 +30,113 @@ const TAB_LABELS: Record<string, string> = {
   profile: 'Profile',
 };
 
+interface TabButtonProps {
+  isFocused: boolean;
+  onPress: () => void;
+  onLongPress: () => void;
+  label: string;
+  IconComponent: any;
+  accessibilityLabel?: string;
+}
+
+// Animated Tab Button Component
+const TabButton = ({
+  isFocused,
+  onPress,
+  onLongPress,
+  label,
+  IconComponent,
+  accessibilityLabel
+}: TabButtonProps) => {
+  const iconSize = R.scale(22);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(isFocused ? 1 : 0.6)).current;
+
+  // Animate opacity on focus change
+  useEffect(() => {
+    Animated.timing(opacityAnim, {
+      toValue: isFocused ? 1 : 0.6,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [isFocused]);
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.9,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+    onPress();
+  };
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      accessibilityLabel={accessibilityLabel}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onLongPress={onLongPress}
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: R.scale(6),
+      }}
+    >
+      <Animated.View style={{
+        transform: [{ scale: scaleAnim }],
+        opacity: opacityAnim,
+        alignItems: 'center',
+        gap: 4
+      }}>
+        <IconComponent
+          size={iconSize}
+          color={isFocused ? palette.gold : palette.muted}
+          strokeWidth={isFocused ? 2.5 : 2} // Thicker when active
+        />
+        <Text
+          fontSize={R.fontSize.xs()}
+          color={isFocused ? '$gold' : '$textMuted'}
+          fontWeight={isFocused ? '600' : '400'}
+          letterSpacing={isFocused ? 0.5 : 0}
+        >
+          {label}
+        </Text>
+
+        {/* Active Indicator Dot */}
+        {isFocused && (
+          <YStack
+            width={4}
+            height={4}
+            borderRadius={2}
+            backgroundColor="$gold"
+            position="absolute"
+            bottom={-8}
+          />
+        )}
+      </Animated.View>
+    </Pressable>
+  );
+};
+
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const bottomSafe = useBottomSafeArea();
-  const iconSize = R.scale(22);
   const tabBarHeight = R.scale(56);
 
   return (
     <YStack
-      backgroundColor="#141420"
+      // Minimalist Celestial Theme Background
+      backgroundColor="$bgBottomBar"
       borderTopWidth={1}
-      borderTopColor="rgba(58, 57, 80, 0.6)"
+      borderTopColor="$border"
       paddingBottom={bottomSafe}
     >
       <XStack
@@ -49,8 +147,11 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
-          const IconComponent = TAB_ICONS[route.name] || Home;
-          const label = TAB_LABELS[route.name] || route.name;
+
+          // Identify icon component
+          const routeName = route.name;
+          const IconComponent = TAB_ICONS[routeName] || Home;
+          const label = TAB_LABELS[routeName] || routeName;
 
           const onPress = () => {
             const event = navigation.emit({
@@ -72,34 +173,15 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           };
 
           return (
-            <Pressable
+            <TabButton
               key={route.key}
-              accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={options.tabBarAccessibilityLabel}
+              isFocused={isFocused}
               onPress={onPress}
               onLongPress={onLongPress}
-              style={{
-                flex: 1,
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: R.scale(6),
-              }}
-            >
-              <YStack alignItems="center" gap={R.scale(3)}>
-                <IconComponent
-                  size={iconSize}
-                  color={isFocused ? '#E4D5A8' : '#7A7A82'}
-                />
-                <Text
-                  fontSize={R.fontSize.xs()}
-                  color={isFocused ? '$creamGold' : '$textMuted'}
-                  fontWeight={isFocused ? '600' : '400'}
-                >
-                  {label}
-                </Text>
-              </YStack>
-            </Pressable>
+              label={label}
+              IconComponent={IconComponent}
+              accessibilityLabel={options.tabBarAccessibilityLabel}
+            />
           );
         })}
       </XStack>

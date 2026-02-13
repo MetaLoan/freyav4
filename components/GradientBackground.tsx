@@ -1,16 +1,22 @@
 import { YStack, YStackProps } from 'tamagui';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Platform } from 'react-native';
+import { palette } from '@/tamagui.config';
 
 /**
  * 渐变背景组件
- * 从 #25272E 到 #5E5E67 的垂直渐变
+ * 
+ * Minimalist Celestial Theme:
+ * 垂直渐变：从 "The Void" (深黑) 到 "Nebula Navy" (深紫蓝)
  */
-export function GradientBackground({ 
-  children, 
-  ...props 
+export function GradientBackground({
+  children,
+  ...props
 }: YStackProps) {
-  
+
+  // 使用新的 palette 颜色
+  const colors = [palette.bgDeep, palette.bgDeepEnd] as const;
+
   if (Platform.OS === 'web') {
     // Web 使用 CSS 渐变
     return (
@@ -19,20 +25,20 @@ export function GradientBackground({
         {...props}
         style={[
           {
-            background: 'linear-gradient(180deg, #25272E 0%, #5E5E67 100%)',
+            background: `linear-gradient(180deg, ${colors[0]} 0%, ${colors[1]} 100%)`,
           },
-          props.style,
+          props.style as any,
         ]}
       >
         {children}
       </YStack>
     );
   }
-  
+
   // 移动端使用 expo-linear-gradient
   return (
     <LinearGradient
-      colors={['#25272E', '#5E5E67']}
+      colors={colors}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={{ flex: 1 }}
