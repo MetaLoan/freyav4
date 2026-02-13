@@ -1,6 +1,6 @@
 import { AstroRequest, AstroResponse, BirthData } from './types';
 
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = 'https://freya-api.fly.dev/api';
 
 class ApiClient {
     private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
