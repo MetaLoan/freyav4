@@ -16,7 +16,7 @@ import { palette } from '@/tamagui.config';
 
 // Tab Icons
 const TAB_ICONS: Record<string, typeof Home> = {
-  index: Home,
+  home: Home,
   explore: Compass,
   chart: Sparkles,
   profile: User,
@@ -24,7 +24,7 @@ const TAB_ICONS: Record<string, typeof Home> = {
 
 // Tab Labels
 const TAB_LABELS: Record<string, string> = {
-  index: 'Home',
+  home: 'Home',
   explore: 'Explore',
   chart: 'Chart',
   profile: 'Profile',
